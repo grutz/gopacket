@@ -730,7 +730,7 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 		TTL:       120,
 		BaseLayer: BaseLayer{Contents: data[14:]},
 	}
-	lldp.Values = nil // test these in next stage
+	//lldp.Values = nil // test these in next stage
 	if !reflect.DeepEqual(lldp, want) {
 		t.Errorf("Values mismatch, \ngot  %#v\nwant %#v\n", lldp, want)
 	}
@@ -830,7 +830,7 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 		TTL:       120,
 		BaseLayer: BaseLayer{Contents: data[14:]},
 	}
-	lldp.Values = nil // test these in next stage
+	//lldp.Values = nil // test these in next stage
 	if !reflect.DeepEqual(lldp, want) {
 		t.Errorf("Values mismatch, \ngot  %#v\nwant %#v\n", lldp, want)
 	}

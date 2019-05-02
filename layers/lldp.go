@@ -109,18 +109,6 @@ func (c *LLDPPortID) serializedLen() int {
 	return len(c.ID) + 3 // +2 for id and length, +1 for subtype
 }
 
-// LinkLayerDiscovery is a packet layer containing the LinkLayer Discovery Protocol.
-// See http:http://standards.ieee.org/getieee802/download/802.1AB-2009.pdf
-// ChassisID, PortID and TTL are mandatory TLV's. Other values can be decoded
-// with DecodeValues()
-type LinkLayerDiscovery struct {
-	BaseLayer
-	ChassisID LLDPChassisID
-	PortID    LLDPPortID
-	TTL       uint16
-	Values    []LinkLayerDiscoveryValue
-}
-
 type IEEEOUI uint32
 
 // http://standards.ieee.org/develop/regauth/oui/oui.txt
@@ -225,19 +213,6 @@ type LLDPMgmtAddress struct {
 	InterfaceSubtype LLDPInterfaceSubtype
 	InterfaceNumber  uint32
 	OID              string
-}
-
-// LinkLayerDiscoveryInfo represents the decoded details for a set of LinkLayerDiscoveryValues
-// Organisation-specific TLV's can be decoded using the various Decode() methods
-type LinkLayerDiscoveryInfo struct {
-	BaseLayer
-	PortDescription string
-	SysName         string
-	SysDescription  string
-	SysCapabilities LLDPSysCapabilities
-	MgmtAddress     LLDPMgmtAddress
-	OrgTLVs         []LLDPOrgSpecificTLV      // Private TLVs
-	Unknown         []LinkLayerDiscoveryValue // undecoded TLVs
 }
 
 /// IEEE 802.1 TLV Subtypes
@@ -760,9 +735,90 @@ type LLDPInfoProfinet struct {
 	PNIOPTCPStatus    LLDPPNIOPTCPStatus
 }
 
+// LinkLayerDiscovery is a packet layer containing the LinkLayer Discovery Protocol.
+// See http:http://standards.ieee.org/getieee802/download/802.1AB-2009.pdf
+// ChassisID, PortID and TTL are mandatory TLV's. Other values can be decoded
+// with DecodeValues()
+type LinkLayerDiscovery struct {
+	BaseLayer
+	ChassisID LLDPChassisID
+	PortID    LLDPPortID
+	TTL       uint16
+	//Values    []LinkLayerDiscoveryValue
+}
+
 // LayerType returns gopacket.LayerTypeLinkLayerDiscovery.
 func (c *LinkLayerDiscovery) LayerType() gopacket.LayerType {
 	return LayerTypeLinkLayerDiscovery
+}
+
+// CanDecode returns gopacket.LayerTypeLinkLayerDiscovery
+func (c *LinkLayerDiscovery) CanDecode() gopacket.LayerClass {
+	return LayerTypeLinkLayerDiscovery
+}
+
+func (c *LinkLayerDiscovery) NextLayerType() gopacket.LayerType {
+	return LayerTypeLinkLayerDiscoveryInfo
+}
+
+func decodeLinkLayerDiscovery(data []byte, p gopacket.PacketBuilder) error {
+	d := &LinkLayerDiscovery{}
+	return decodingLayerDecoder(d, data, p)
+}
+
+func (c *LinkLayerDiscovery) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	var vals []LinkLayerDiscoveryValue
+	vData := data[0:]
+	for len(vData) > 0 {
+		nbit := vData[0] & 0x01
+		t := LLDPTLVType(vData[0] >> 1)
+		val := LinkLayerDiscoveryValue{Type: t, Length: uint16(nbit)<<8 + uint16(vData[1])}
+		if val.Length > 0 {
+			val.Value = vData[2 : val.Length+2]
+		}
+		vals = append(vals, val)
+		if t == LLDPTLVEnd {
+			break
+		}
+		if len(vData) < int(2+val.Length) {
+			return errors.New("Malformed LinkLayerDiscovery Header")
+		}
+		vData = vData[2+val.Length:]
+	}
+	if len(vals) < 4 {
+		return errors.New("Missing mandatory LinkLayerDiscovery TLV")
+	}
+	gotEnd := false
+	for _, v := range vals {
+		switch v.Type {
+		case LLDPTLVEnd:
+			gotEnd = true
+		case LLDPTLVChassisID:
+			if len(v.Value) < 2 {
+				return errors.New("Malformed LinkLayerDiscovery ChassisID TLV")
+			}
+			c.ChassisID.Subtype = LLDPChassisIDSubType(v.Value[0])
+			c.ChassisID.ID = v.Value[1:]
+		case LLDPTLVPortID:
+			if len(v.Value) < 2 {
+				return errors.New("Malformed LinkLayerDiscovery PortID TLV")
+			}
+			c.PortID.Subtype = LLDPPortIDSubType(v.Value[0])
+			c.PortID.ID = v.Value[1:]
+		case LLDPTLVTTL:
+			if len(v.Value) < 2 {
+				return errors.New("Malformed LinkLayerDiscovery TTL TLV")
+			}
+			c.TTL = binary.BigEndian.Uint16(v.Value[0:2])
+		default:
+		}
+	}
+	if c.ChassisID.Subtype == 0 || c.PortID.Subtype == 0 || !gotEnd {
+		return errors.New("Missing mandatory LinkLayerDiscovery TLV")
+	}
+	c.Contents = data[:19]
+	c.Payload = data[19:]
+	return nil
 }
 
 // SerializeTo serializes LLDP packet to bytes and writes on SerializeBuffer.
@@ -788,7 +844,40 @@ func (c *LinkLayerDiscovery) SerializeTo(b gopacket.SerializeBuffer, opts gopack
 
 }
 
-func decodeLinkLayerDiscovery(data []byte, p gopacket.PacketBuilder) error {
+// LinkLayerDiscoveryInfo represents the decoded details for a set of LinkLayerDiscoveryValues
+// Organisation-specific TLV's can be decoded using the various Decode() methods
+type LinkLayerDiscoveryInfo struct {
+	BaseLayer
+	PortDescription string
+	SysName         string
+	SysDescription  string
+	SysCapabilities LLDPSysCapabilities
+	MgmtAddress     LLDPMgmtAddress
+	OrgTLVs         []LLDPOrgSpecificTLV      // Private TLVs
+	Unknown         []LinkLayerDiscoveryValue // undecoded TLVs
+}
+
+// LayerType returns gopacket.LayerTypeLinkLayerDiscoveryInfo.
+func (c *LinkLayerDiscoveryInfo) LayerType() gopacket.LayerType {
+	return LayerTypeLinkLayerDiscoveryInfo
+}
+
+// CanDecode returns gopacket.LayerTypeLinkLayerDiscoveryInfo
+func (c *LinkLayerDiscoveryInfo) CanDecode() gopacket.LayerClass {
+	return LayerTypeLinkLayerDiscoveryInfo
+}
+
+// NextLayerType returns gopacket.LayerTypeZero
+func (c *LinkLayerDiscoveryInfo) NextLayerType() gopacket.LayerType {
+	return gopacket.LayerTypeZero
+}
+
+func decodeLinkLayerDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
+	c := &LinkLayerDiscoveryInfo{}
+	return decodingLayerDecoder(c, data, p)
+}
+
+func (c *LinkLayerDiscoveryInfo) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	var vals []LinkLayerDiscoveryValue
 	vData := data[0:]
 	for len(vData) > 0 {
@@ -807,58 +896,24 @@ func decodeLinkLayerDiscovery(data []byte, p gopacket.PacketBuilder) error {
 		}
 		vData = vData[2+val.Length:]
 	}
-	if len(vals) < 4 {
-		return errors.New("Missing mandatory LinkLayerDiscovery TLV")
-	}
-	c := &LinkLayerDiscovery{}
+
 	gotEnd := false
 	for _, v := range vals {
 		switch v.Type {
 		case LLDPTLVEnd:
 			gotEnd = true
-		case LLDPTLVChassisID:
-			if len(v.Value) < 2 {
-				return errors.New("Malformed LinkLayerDiscovery ChassisID TLV")
-			}
-			c.ChassisID.Subtype = LLDPChassisIDSubType(v.Value[0])
-			c.ChassisID.ID = v.Value[1:]
-		case LLDPTLVPortID:
-			if len(v.Value) < 2 {
-				return errors.New("Malformed LinkLayerDiscovery PortID TLV")
-			}
-			c.PortID.Subtype = LLDPPortIDSubType(v.Value[0])
-			c.PortID.ID = v.Value[1:]
-		case LLDPTLVTTL:
-			if len(v.Value) < 2 {
-				return errors.New("Malformed LinkLayerDiscovery TTL TLV")
-			}
-			c.TTL = binary.BigEndian.Uint16(v.Value[0:2])
-		default:
-			c.Values = append(c.Values, v)
-		}
-	}
-	if c.ChassisID.Subtype == 0 || c.PortID.Subtype == 0 || !gotEnd {
-		return errors.New("Missing mandatory LinkLayerDiscovery TLV")
-	}
-	c.Contents = data
-	p.AddLayer(c)
-
-	info := &LinkLayerDiscoveryInfo{}
-	p.AddLayer(info)
-	for _, v := range c.Values {
-		switch v.Type {
 		case LLDPTLVPortDescription:
-			info.PortDescription = string(v.Value)
+			c.PortDescription = string(v.Value)
 		case LLDPTLVSysName:
-			info.SysName = string(v.Value)
+			c.SysName = string(v.Value)
 		case LLDPTLVSysDescription:
-			info.SysDescription = string(v.Value)
+			c.SysDescription = string(v.Value)
 		case LLDPTLVSysCapabilities:
 			if err := checkLLDPTLVLen(v, 4); err != nil {
 				return err
 			}
-			info.SysCapabilities.SystemCap = getCapabilities(binary.BigEndian.Uint16(v.Value[0:2]))
-			info.SysCapabilities.EnabledCap = getCapabilities(binary.BigEndian.Uint16(v.Value[2:4]))
+			c.SysCapabilities.SystemCap = getCapabilities(binary.BigEndian.Uint16(v.Value[0:2]))
+			c.SysCapabilities.EnabledCap = getCapabilities(binary.BigEndian.Uint16(v.Value[2:4]))
 		case LLDPTLVMgmtAddress:
 			if err := checkLLDPTLVLen(v, 9); err != nil {
 				return err
@@ -867,22 +922,26 @@ func decodeLinkLayerDiscovery(data []byte, p gopacket.PacketBuilder) error {
 			if err := checkLLDPTLVLen(v, int(mlen+7)); err != nil {
 				return err
 			}
-			info.MgmtAddress.Subtype = IANAAddressFamily(v.Value[1])
-			info.MgmtAddress.Address = v.Value[2 : mlen+1]
-			info.MgmtAddress.InterfaceSubtype = LLDPInterfaceSubtype(v.Value[mlen+1])
-			info.MgmtAddress.InterfaceNumber = binary.BigEndian.Uint32(v.Value[mlen+2 : mlen+6])
+			c.MgmtAddress.Subtype = IANAAddressFamily(v.Value[1])
+			c.MgmtAddress.Address = v.Value[2 : mlen+1]
+			c.MgmtAddress.InterfaceSubtype = LLDPInterfaceSubtype(v.Value[mlen+1])
+			c.MgmtAddress.InterfaceNumber = binary.BigEndian.Uint32(v.Value[mlen+2 : mlen+6])
 			olen := v.Value[mlen+6]
 			if err := checkLLDPTLVLen(v, int(mlen+6+olen)); err != nil {
 				return err
 			}
-			info.MgmtAddress.OID = string(v.Value[mlen+9 : mlen+9+olen])
+			c.MgmtAddress.OID = string(v.Value[mlen+9 : mlen+9+olen])
 		case LLDPTLVOrgSpecific:
 			if err := checkLLDPTLVLen(v, 4); err != nil {
 				return err
 			}
-			info.OrgTLVs = append(info.OrgTLVs, LLDPOrgSpecificTLV{IEEEOUI(binary.BigEndian.Uint32(append([]byte{byte(0)}, v.Value[0:3]...))), uint8(v.Value[3]), v.Value[4:]})
+			c.OrgTLVs = append(c.OrgTLVs, LLDPOrgSpecificTLV{IEEEOUI(binary.BigEndian.Uint32(append([]byte{byte(0)}, v.Value[0:3]...))), uint8(v.Value[3]), v.Value[4:]})
 		}
 	}
+	if !gotEnd {
+		return errors.New("Missing mandatory LinkLayerDiscovery TLV")
+	}
+	c.Contents = data
 	return nil
 }
 
@@ -1190,11 +1249,6 @@ func (l *LinkLayerDiscoveryInfo) DecodeProfinet() (info LLDPInfoProfinet, err er
 		}
 	}
 	return
-}
-
-// LayerType returns gopacket.LayerTypeLinkLayerDiscoveryInfo.
-func (c *LinkLayerDiscoveryInfo) LayerType() gopacket.LayerType {
-	return LayerTypeLinkLayerDiscoveryInfo
 }
 
 func getCapabilities(v uint16) (c LLDPCapabilities) {
