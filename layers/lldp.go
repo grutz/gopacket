@@ -736,7 +736,7 @@ type LLDPInfoProfinet struct {
 }
 
 // LinkLayerDiscovery is a packet layer containing the LinkLayer Discovery Protocol.
-// See http:http://standards.ieee.org/getieee802/download/802.1AB-2009.pdf
+// See http:http://standards.ieee.org/g	etieee802/download/802.1AB-2009.pdf
 // ChassisID, PortID and TTL are mandatory TLV's. Other values can be decoded
 // with DecodeValues()
 type LinkLayerDiscovery struct {
@@ -789,6 +789,7 @@ func (c *LinkLayerDiscovery) DecodeFromBytes(data []byte, df gopacket.DecodeFeed
 		return errors.New("Missing mandatory LinkLayerDiscovery TLV")
 	}
 	gotEnd := false
+	var byteCount uint16
 	for _, v := range vals {
 		switch v.Type {
 		case LLDPTLVEnd:
@@ -797,18 +798,21 @@ func (c *LinkLayerDiscovery) DecodeFromBytes(data []byte, df gopacket.DecodeFeed
 			if len(v.Value) < 2 {
 				return errors.New("Malformed LinkLayerDiscovery ChassisID TLV")
 			}
+			byteCount += (v.Length + 2)
 			c.ChassisID.Subtype = LLDPChassisIDSubType(v.Value[0])
 			c.ChassisID.ID = v.Value[1:]
 		case LLDPTLVPortID:
 			if len(v.Value) < 2 {
 				return errors.New("Malformed LinkLayerDiscovery PortID TLV")
 			}
+			byteCount += (v.Length + 2)
 			c.PortID.Subtype = LLDPPortIDSubType(v.Value[0])
 			c.PortID.ID = v.Value[1:]
 		case LLDPTLVTTL:
 			if len(v.Value) < 2 {
 				return errors.New("Malformed LinkLayerDiscovery TTL TLV")
 			}
+			byteCount += (v.Length + 2)
 			c.TTL = binary.BigEndian.Uint16(v.Value[0:2])
 		default:
 		}
@@ -816,8 +820,8 @@ func (c *LinkLayerDiscovery) DecodeFromBytes(data []byte, df gopacket.DecodeFeed
 	if c.ChassisID.Subtype == 0 || c.PortID.Subtype == 0 || !gotEnd {
 		return errors.New("Missing mandatory LinkLayerDiscovery TLV")
 	}
-	c.Contents = data[:19]
-	c.Payload = data[19:]
+	c.Contents = data[:byteCount]
+	c.Payload = data[byteCount:]
 	return nil
 }
 

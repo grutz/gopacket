@@ -728,7 +728,7 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 		ChassisID: LLDPChassisID{LLDPChassisIDSubTypeMACAddr, []byte{0x00, 0x01, 0x30, 0xf9, 0xad, 0xa0}},
 		PortID:    LLDPPortID{LLDPPortIDSubtypeIfaceName, []byte("1/1")},
 		TTL:       120,
-		BaseLayer: BaseLayer{Contents: data[14:]},
+		BaseLayer: BaseLayer{Contents: data[14:33], Payload: data[33:]},
 	}
 	//lldp.Values = nil // test these in next stage
 	if !reflect.DeepEqual(lldp, want) {
@@ -757,6 +757,7 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 			LLDPOrgSpecificTLV{OUI: 0x80c2, SubType: 0x4, Info: []uint8{0x0}},
 		},
 		Unknown: nil,
+		BaseLayer:	BaseLayer{Contents: data[33:]},
 	}
 	if !reflect.DeepEqual(info, wantinfo) {
 		t.Errorf("Values mismatch, \ngot  %#v\nwant %#v\n", info, wantinfo)
@@ -828,7 +829,7 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 		ChassisID: LLDPChassisID{LLDPChassisIDSubTypeMACAddr, []byte{0x00, 0x13, 0x21, 0x57, 0xca, 0x40}},
 		PortID:    LLDPPortID{LLDPPortIDSubtypeLocal, []byte("1")},
 		TTL:       120,
-		BaseLayer: BaseLayer{Contents: data[14:]},
+		BaseLayer: BaseLayer{Contents: data[14:31], Payload: data[31:]},
 	}
 	//lldp.Values = nil // test these in next stage
 	if !reflect.DeepEqual(lldp, want) {
@@ -854,6 +855,7 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 			LLDPOrgSpecificTLV{OUI: 0x12bb, SubType: 0x4, Info: []uint8{0x3, 0x0, 0x41}},
 		},
 		Unknown: nil,
+		BaseLayer: BaseLayer{Contents: data[31:]},
 	}
 	if !reflect.DeepEqual(info, wantinfo) {
 		t.Errorf("Values mismatch, \ngot  %#v\nwant %#v\n", info, wantinfo)
