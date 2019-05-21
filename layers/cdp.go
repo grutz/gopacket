@@ -241,6 +241,7 @@ func (c *CiscoDiscovery) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	}
 	c.Contents = data[0:4]
 	c.Payload = data[4:]
+	return nil
 }
 
 // LayerType returns gopacket.LayerTypeCiscoDiscoveryInfo.
@@ -248,27 +249,24 @@ func (c *CiscoDiscoveryInfo) LayerType() gopacket.LayerType {
 	return LayerTypeCiscoDiscoveryInfo
 }
 
-func decodeCiscoDiscoveryTLVs(data []byte) (values []CiscoDiscoveryValue, err error) {
-	for len(data) > 0 {
-		val := CiscoDiscoveryValue{
-			Type:   CDPTLVType(binary.BigEndian.Uint16(data[:2])),
-			Length: binary.BigEndian.Uint16(data[2:4]),
-		}
-		if val.Length < 4 {
-			err = fmt.Errorf("Invalid CiscoDiscovery value length %d", val.Length)
-			break
-		}
-		val.Value = data[4:val.Length]
-		values = append(values, val)
-		data = data[val.Length:]
-	}
-	return
+// CanDecode returns gopacket.LayerTypeCiscoDiscoveryInfo
+func (c *CiscoDiscoveryInfo) CanDecode() gopacket.LayerClass {
+	return LayerTypeCiscoDiscoveryInfo
+}
+
+// NextLayerType returns nil
+func (c *CiscoDiscoveryInfo) NextLayerType() gopacket.LayerType {
+	return gopacket.LayerTypeZero
 }
 
 func decodeCiscoDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
+	d := &CiscoDiscoveryInfo{}
+	return decodingLayerDecoder(d, data, p)
+}
+
+func (info *CiscoDiscoveryInfo) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	var err error
-	info := &CiscoDiscoveryInfo{BaseLayer: BaseLayer{Contents: data}}
-	p.AddLayer(info)
+	info.BaseLayer= BaseLayer{Contents: data}
 	values, err := decodeCiscoDiscoveryTLVs(data)
 	if err != nil { // Unlikely, as parent decode will fail, but better safe...
 		return err
@@ -482,6 +480,28 @@ func decodeCiscoDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
 	}
 	return nil
 }
+
+
+
+
+func decodeCiscoDiscoveryTLVs(data []byte) (values []CiscoDiscoveryValue, err error) {
+	for len(data) > 0 {
+		val := CiscoDiscoveryValue{
+			Type:   CDPTLVType(binary.BigEndian.Uint16(data[:2])),
+			Length: binary.BigEndian.Uint16(data[2:4]),
+		}
+		if val.Length < 4 {
+			err = fmt.Errorf("Invalid CiscoDiscovery value length %d", val.Length)
+			break
+		}
+		val.Value = data[4:val.Length]
+		values = append(values, val)
+		data = data[val.Length:]
+	}
+	return
+}
+
+
 
 // CDP Protocol Types
 const (
