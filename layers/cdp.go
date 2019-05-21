@@ -67,7 +67,7 @@ type CiscoDiscovery struct {
 	Version  byte
 	TTL      byte
 	Checksum uint16
-	Values   []CiscoDiscoveryValue
+	//Values   []CiscoDiscoveryValue
 }
 
 // CDPCapability is the set of capabilities advertised by a CDP device.
@@ -217,24 +217,30 @@ func (c *CiscoDiscovery) LayerType() gopacket.LayerType {
 	return LayerTypeCiscoDiscovery
 }
 
+// CanDecode returns gopacket.LayerTypeCiscoDiscovery
+func (c *CiscoDiscovery) CanDecode() gopacket.LayerClass {
+	return LayerTypeCiscoDiscovery
+}
+
+// NextLayerType returns gopacket.LayerTypeCiscoDiscoveryInfo
+func (c *CiscoDiscovery) NextLayerType() gopacket.LayerType {
+	return LayerTypeCiscoDiscoveryInfo
+}
+
 func decodeCiscoDiscovery(data []byte, p gopacket.PacketBuilder) error {
-	c := &CiscoDiscovery{
-		Version:  data[0],
-		TTL:      data[1],
-		Checksum: binary.BigEndian.Uint16(data[2:4]),
-	}
+	d := &CiscoDiscovery{}
+	return decodingLayerDecoder(d, data, p)
+}
+
+func (c *CiscoDiscovery) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error{
+	c.Version = data[0]
+	c.TTL = data[1]
+	c.Checksum = binary.BigEndian.Uint16(data[2:4])
 	if c.Version != 1 && c.Version != 2 {
 		return fmt.Errorf("Invalid CiscoDiscovery version number %d", c.Version)
 	}
-	var err error
-	c.Values, err = decodeCiscoDiscoveryTLVs(data[4:])
-	if err != nil {
-		return err
-	}
 	c.Contents = data[0:4]
 	c.Payload = data[4:]
-	p.AddLayer(c)
-	return p.NextDecoder(gopacket.DecodeFunc(decodeCiscoDiscoveryInfo))
 }
 
 // LayerType returns gopacket.LayerTypeCiscoDiscoveryInfo.

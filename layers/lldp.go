@@ -736,7 +736,7 @@ type LLDPInfoProfinet struct {
 }
 
 // LinkLayerDiscovery is a packet layer containing the LinkLayer Discovery Protocol.
-// See http:http://standards.ieee.org/g	etieee802/download/802.1AB-2009.pdf
+// See http:http://standards.ieee.org/getieee802/download/802.1AB-2009.pdf
 // ChassisID, PortID and TTL are mandatory TLV's. Other values can be decoded
 // with DecodeValues()
 type LinkLayerDiscovery struct {
