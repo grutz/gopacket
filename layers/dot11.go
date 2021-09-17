@@ -1457,6 +1457,8 @@ func (m *Dot11InformationElement) DecodeFromBytes(data []byte, df gopacket.Decod
 	m.ID = Dot11InformationElementID(data[0])
 	m.Length = data[1]
 	offset := int(2)
+	fmt.Printf("Dot11InformationElement: %v\n", data)
+	fmt.Printf("len(data) = %d, offset = %d, max = %d\n", len(data), offset, offset+int(m.Length))
 
 	if len(data) < offset+int(m.Length) {
 		df.SetTruncated()
@@ -1828,13 +1830,14 @@ func decodeDot11MgmtProbeReq(data []byte, p gopacket.PacketBuilder) error {
 func (m *Dot11MgmtProbeReq) LayerType() gopacket.LayerType  { return LayerTypeDot11MgmtProbeReq }
 func (m *Dot11MgmtProbeReq) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtProbeReq }
 func (m *Dot11MgmtProbeReq) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	if len(data) < 12 {
-		df.SetTruncated()
+	fmt.Printf("Length data=%d\n", len(data))
+	//if len(data) < 33 {
+	//	df.SetTruncated()
+	//
+	//	return fmt.Errorf("Dot11MgmtProbeResp length %v too short, %v required", len(data), 29)
+	//}
 
-		return fmt.Errorf("Dot11MgmtProbeResp length %v too short, %v required", len(data), 12)
-	}
-
-	m.Payload = data
+	m.Payload = data //[:len(data)-4]
 	return m.Dot11Mgmt.DecodeFromBytes(data, df)
 }
 

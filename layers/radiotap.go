@@ -674,6 +674,20 @@ func (self RadioTapVHTMCSNSS) String() string {
 func decodeRadioTap(data []byte, p gopacket.PacketBuilder) error {
 	d := &RadioTap{}
 	// TODO: Should we set LinkLayer here? And implement LinkFlow
+
+	// Check if frame check sequence exists and is valid
+	possible_fcs := binary.LittleEndian.Uint32(data[len(data)-4:len(data)])
+	fcs_calculated := crc32.ChecksumIEEE(data[0 : len(data)-4])
+	if possible_fcs == fcs_calculated {
+		// Calculated FCS is what's at the end of the frame
+		d.FCSBytes = data[len(data)-4:len(data)]
+		d.HasValidFCS = true
+		data = data[0:len(data)-4]		// Remove FCS values from data
+	} else {
+		// This doesn't mean the FCS is truly invalid, just that it's not there
+		d.HasValidFCS = false
+	}
+
 	return decodingLayerDecoder(d, data, p)
 }
 
@@ -722,6 +736,10 @@ type RadioTap struct {
 	MCS         RadioTapMCS
 	AMPDUStatus RadioTapAMPDUStatus
 	VHT         RadioTapVHT
+	// not a true indicator of validity as an invalid calculation may mean it's not there
+	HasValidFCS	bool
+	FCSBytes	[]byte
+
 }
 
 func (m *RadioTap) LayerType() gopacket.LayerType { return LayerTypeRadioTap }
