@@ -61,7 +61,7 @@ var (
 	LayerTypeICMPv6                       = gopacket.RegisterLayerType(57, gopacket.LayerTypeMetadata{Name: "ICMPv6", Decoder: gopacket.DecodeFunc(decodeICMPv6)})
 	LayerTypeLinkLayerDiscovery           = gopacket.RegisterLayerType(58, gopacket.LayerTypeMetadata{Name: "LinkLayerDiscovery", Decoder: gopacket.DecodeFunc(decodeLinkLayerDiscovery)})
 	LayerTypeCiscoDiscoveryInfo           = gopacket.RegisterLayerType(59, gopacket.LayerTypeMetadata{Name: "CiscoDiscoveryInfo", Decoder: gopacket.DecodeFunc(decodeCiscoDiscoveryInfo)})
-	LayerTypeLinkLayerDiscoveryInfo       = gopacket.RegisterLayerType(60, gopacket.LayerTypeMetadata{Name: "LinkLayerDiscoveryInfo", Decoder: nil})
+	LayerTypeLinkLayerDiscoveryInfo       = gopacket.RegisterLayerType(60, gopacket.LayerTypeMetadata{Name: "LinkLayerDiscoveryInfo", Decoder: gopacket.DecodeFunc(decodeLinkLayerDiscoveryInfo)})
 	LayerTypeNortelDiscovery              = gopacket.RegisterLayerType(61, gopacket.LayerTypeMetadata{Name: "NortelDiscovery", Decoder: gopacket.DecodeFunc(decodeNortelDiscovery)})
 	LayerTypeIGMP                         = gopacket.RegisterLayerType(62, gopacket.LayerTypeMetadata{Name: "IGMP", Decoder: gopacket.DecodeFunc(decodeIGMP)})
 	LayerTypePFLog                        = gopacket.RegisterLayerType(63, gopacket.LayerTypeMetadata{Name: "PFLog", Decoder: gopacket.DecodeFunc(decodePFLog)})

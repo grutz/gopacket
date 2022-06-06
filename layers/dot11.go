@@ -935,7 +935,7 @@ func (m *Dot11) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	switch mainType {
 	case Dot11TypeCtrl:
 		switch m.Type {
-		case Dot11TypeCtrlRTS, Dot11TypeCtrlPowersavePoll, Dot11TypeCtrlCFEnd, Dot11TypeCtrlCFEndAck:
+		case Dot11TypeCtrlRTS, Dot11TypeCtrlPowersavePoll, Dot11TypeCtrlCFEnd, Dot11TypeCtrlCFEndAck, Dot11TypeCtrlBlockAck, Dot11TypeCtrlBlockAckReq:
 			if len(data) < offset+6 {
 				df.SetTruncated()
 				return fmt.Errorf("Dot11 length %v too short, %v required", len(data), offset+6)
@@ -1108,7 +1108,7 @@ func (m Dot11) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 	switch m.Type.MainType() {
 	case Dot11TypeCtrl:
 		switch m.Type {
-		case Dot11TypeCtrlRTS, Dot11TypeCtrlPowersavePoll, Dot11TypeCtrlCFEnd, Dot11TypeCtrlCFEndAck:
+		case Dot11TypeCtrlRTS, Dot11TypeCtrlPowersavePoll, Dot11TypeCtrlCFEnd, Dot11TypeCtrlCFEndAck, Dot11TypeCtrlBlockAck, Dot11TypeCtrlBlockAckReq:
 			copy(buf[offset:offset+6], m.Address2)
 			offset += 6
 		}
@@ -1841,6 +1841,10 @@ func (m *Dot11MgmtProbeReq) LayerType() gopacket.LayerType  { return LayerTypeDo
 func (m *Dot11MgmtProbeReq) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtProbeReq }
 func (m *Dot11MgmtProbeReq) NextLayerType() gopacket.LayerType {
 	return LayerTypeDot11InformationElement
+}
+func (m *Dot11MgmtProbeReq) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	m.Payload = data
+	return m.Dot11Mgmt.DecodeFromBytes(data, df)
 }
 
 type Dot11MgmtProbeResp struct {
