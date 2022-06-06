@@ -1280,8 +1280,10 @@ func decodeDot11DataCFPollNoData(data []byte, p gopacket.PacketBuilder) error {
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *Dot11DataCFPollNoData) LayerType() gopacket.LayerType  { return LayerTypeDot11DataCFPollNoData }
-func (m *Dot11DataCFPollNoData) CanDecode() gopacket.LayerClass { return LayerTypeDot11DataCFPollNoData }
+func (m *Dot11DataCFPollNoData) LayerType() gopacket.LayerType { return LayerTypeDot11DataCFPollNoData }
+func (m *Dot11DataCFPollNoData) CanDecode() gopacket.LayerClass {
+	return LayerTypeDot11DataCFPollNoData
+}
 func (m *Dot11DataCFPollNoData) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	return m.Dot11Data.DecodeFromBytes(data, df)
 }
@@ -1339,8 +1341,10 @@ func decodeDot11DataQOSDataCFAck(data []byte, p gopacket.PacketBuilder) error {
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *Dot11DataQOSDataCFAck) LayerType() gopacket.LayerType     { return LayerTypeDot11DataQOSDataCFAck }
-func (m *Dot11DataQOSDataCFAck) CanDecode() gopacket.LayerClass    { return LayerTypeDot11DataQOSDataCFAck }
+func (m *Dot11DataQOSDataCFAck) LayerType() gopacket.LayerType { return LayerTypeDot11DataQOSDataCFAck }
+func (m *Dot11DataQOSDataCFAck) CanDecode() gopacket.LayerClass {
+	return LayerTypeDot11DataQOSDataCFAck
+}
 func (m *Dot11DataQOSDataCFAck) NextLayerType() gopacket.LayerType { return LayerTypeDot11DataCFAck }
 
 type Dot11DataQOSDataCFPoll struct {
@@ -1830,14 +1834,7 @@ func decodeDot11MgmtProbeReq(data []byte, p gopacket.PacketBuilder) error {
 func (m *Dot11MgmtProbeReq) LayerType() gopacket.LayerType  { return LayerTypeDot11MgmtProbeReq }
 func (m *Dot11MgmtProbeReq) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtProbeReq }
 func (m *Dot11MgmtProbeReq) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	fmt.Printf("Length data=%d\n", len(data))
-	//if len(data) < 33 {
-	//	df.SetTruncated()
-	//
-	//	return fmt.Errorf("Dot11MgmtProbeResp length %v too short, %v required", len(data), 29)
-	//}
-
-	m.Payload = data //[:len(data)-4]
+	m.Payload = data
 	return m.Dot11Mgmt.DecodeFromBytes(data, df)
 }
 
