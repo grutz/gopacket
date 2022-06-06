@@ -1460,9 +1460,7 @@ func (m *Dot11InformationElement) DecodeFromBytes(data []byte, df gopacket.Decod
 	}
 	m.ID = Dot11InformationElementID(data[0])
 	m.Length = data[1]
-	offset := int(2)
-	fmt.Printf("Dot11InformationElement: %v\n", data)
-	fmt.Printf("len(data) = %d, offset = %d, max = %d\n", len(data), offset, offset+int(m.Length))
+	offset := 2
 
 	if len(data) < offset+int(m.Length) {
 		df.SetTruncated()
