@@ -862,17 +862,17 @@ type LinkLayerDiscoveryInfo struct {
 }
 
 // LayerType returns gopacket.LayerTypeLinkLayerDiscoveryInfo.
-func (c *LinkLayerDiscoveryInfo) LayerType() gopacket.LayerType {
+func (l *LinkLayerDiscoveryInfo) LayerType() gopacket.LayerType {
 	return LayerTypeLinkLayerDiscoveryInfo
 }
 
 // CanDecode returns gopacket.LayerTypeLinkLayerDiscoveryInfo
-func (c *LinkLayerDiscoveryInfo) CanDecode() gopacket.LayerClass {
+func (l *LinkLayerDiscoveryInfo) CanDecode() gopacket.LayerClass {
 	return LayerTypeLinkLayerDiscoveryInfo
 }
 
 // NextLayerType returns gopacket.LayerTypeZero
-func (c *LinkLayerDiscoveryInfo) NextLayerType() gopacket.LayerType {
+func (l *LinkLayerDiscoveryInfo) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypeZero
 }
 
@@ -881,7 +881,7 @@ func decodeLinkLayerDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
 	return decodingLayerDecoder(c, data, p)
 }
 
-func (c *LinkLayerDiscoveryInfo) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (l *LinkLayerDiscoveryInfo) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	var vals []LinkLayerDiscoveryValue
 	vData := data[0:]
 	for len(vData) > 0 {
@@ -907,17 +907,17 @@ func (c *LinkLayerDiscoveryInfo) DecodeFromBytes(data []byte, df gopacket.Decode
 		case LLDPTLVEnd:
 			gotEnd = true
 		case LLDPTLVPortDescription:
-			c.PortDescription = string(v.Value)
+			l.PortDescription = string(v.Value)
 		case LLDPTLVSysName:
-			c.SysName = string(v.Value)
+			l.SysName = string(v.Value)
 		case LLDPTLVSysDescription:
-			c.SysDescription = string(v.Value)
+			l.SysDescription = string(v.Value)
 		case LLDPTLVSysCapabilities:
 			if err := checkLLDPTLVLen(v, 4); err != nil {
 				return err
 			}
-			c.SysCapabilities.SystemCap = getCapabilities(binary.BigEndian.Uint16(v.Value[0:2]))
-			c.SysCapabilities.EnabledCap = getCapabilities(binary.BigEndian.Uint16(v.Value[2:4]))
+			l.SysCapabilities.SystemCap = getCapabilities(binary.BigEndian.Uint16(v.Value[0:2]))
+			l.SysCapabilities.EnabledCap = getCapabilities(binary.BigEndian.Uint16(v.Value[2:4]))
 		case LLDPTLVMgmtAddress:
 			if err := checkLLDPTLVLen(v, 9); err != nil {
 				return err
@@ -926,26 +926,26 @@ func (c *LinkLayerDiscoveryInfo) DecodeFromBytes(data []byte, df gopacket.Decode
 			if err := checkLLDPTLVLen(v, int(mlen+7)); err != nil {
 				return err
 			}
-			c.MgmtAddress.Subtype = IANAAddressFamily(v.Value[1])
-			c.MgmtAddress.Address = v.Value[2 : mlen+1]
-			c.MgmtAddress.InterfaceSubtype = LLDPInterfaceSubtype(v.Value[mlen+1])
-			c.MgmtAddress.InterfaceNumber = binary.BigEndian.Uint32(v.Value[mlen+2 : mlen+6])
+			l.MgmtAddress.Subtype = IANAAddressFamily(v.Value[1])
+			l.MgmtAddress.Address = v.Value[2 : mlen+1]
+			l.MgmtAddress.InterfaceSubtype = LLDPInterfaceSubtype(v.Value[mlen+1])
+			l.MgmtAddress.InterfaceNumber = binary.BigEndian.Uint32(v.Value[mlen+2 : mlen+6])
 			olen := v.Value[mlen+6]
 			if err := checkLLDPTLVLen(v, int(mlen+6+olen)); err != nil {
 				return err
 			}
-			c.MgmtAddress.OID = string(v.Value[mlen+9 : mlen+9+olen])
+			l.MgmtAddress.OID = string(v.Value[mlen+9 : mlen+9+olen])
 		case LLDPTLVOrgSpecific:
 			if err := checkLLDPTLVLen(v, 4); err != nil {
 				return err
 			}
-			c.OrgTLVs = append(c.OrgTLVs, LLDPOrgSpecificTLV{IEEEOUI(binary.BigEndian.Uint32(append([]byte{byte(0)}, v.Value[0:3]...))), uint8(v.Value[3]), v.Value[4:]})
+			l.OrgTLVs = append(l.OrgTLVs, LLDPOrgSpecificTLV{IEEEOUI(binary.BigEndian.Uint32(append([]byte{byte(0)}, v.Value[0:3]...))), uint8(v.Value[3]), v.Value[4:]})
 		}
 	}
 	if !gotEnd {
 		return errors.New("Missing mandatory LinkLayerDiscovery TLV")
 	}
-	c.Contents = data
+	l.Contents = data
 	return nil
 }
 
