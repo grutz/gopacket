@@ -46,112 +46,117 @@ type MDP struct {
 }
 
 // LayerType returns LayerTypeMDP.
-func (e *MDP) LayerType() gopacket.LayerType { return LayerTypeMDP }
+func (m *MDP) LayerType() gopacket.LayerType { return LayerTypeMDP }
 
 // DecodeFromBytes decodes the given bytes into this layer.
-func (e *MDP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	var l int
+func (m *MDP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	var length int
 	if len(data) < 28 {
 		df.SetTruncated()
 		return fmt.Errorf("MDP length %d too short", len(data))
 	}
-	e.Type = EthernetTypeMerakiDiscoveryProtocol
-	e.Length = len(data)
+	m.Type = EthernetTypeMerakiDiscoveryProtocol
+	m.Length = len(data)
 	offset := 28
-	e.PreambleData = data[:offset]
+	m.PreambleData = data[:offset]
 
 	for {
-		if offset >= e.Length {
+		if offset >= m.Length {
 			break
 		}
 		t := data[offset]
 		switch t {
 		case MdpTlvDeviceInfo:
 			offset += 2
-			l = int(data[offset-1])
-			e.Contents = append(e.Contents, data[offset-2:offset+l]...)
-			e.DeviceInfo = string(data[offset : offset+l])
-			offset += l
+			length = int(data[offset-1])
+			m.Contents = append(m.Contents, data[offset-2:offset+length]...)
+			m.DeviceInfo = string(data[offset : offset+length])
+			offset += length
 			break
 		case MdpTlvNetworkInfo:
 			offset += 2
-			l = int(data[offset-1])
-			e.NetworkInfo = string(data[offset : offset+l])
-			offset += l
+			length = int(data[offset-1])
+			m.NetworkInfo = string(data[offset : offset+length])
+			offset += length
 			break
 		case MdpTlvLongitude:
 			offset += 2
-			l = int(data[offset-1])
-			e.Longitude, _ = strconv.ParseFloat(string(data[offset:offset+l]), 64)
-			offset += l
+			length = int(data[offset-1])
+			m.Longitude, _ = strconv.ParseFloat(string(data[offset:offset+length]), 64)
+			offset += length
 			break
 		case MdpTlvLatitude:
 			offset += 2
-			l = int(data[offset-1])
-			e.Latitude, _ = strconv.ParseFloat(string(data[offset:offset+l]), 64)
-			offset += l
+			length = int(data[offset-1])
+			m.Latitude, _ = strconv.ParseFloat(string(data[offset:offset+length]), 64)
+			offset += length
 			break
 		case MdpTlvType6:
 			offset += 2
-			l = int(data[offset-1])
-			e.Type6UUID = string(data[offset : offset+l])
-			offset += l
+			length = int(data[offset-1])
+			m.Type6UUID = string(data[offset : offset+length])
+			offset += length
 			break
 		case MdpTlvType7:
 			offset += 2
-			l = int(data[offset-1])
-			e.Type7UUID = string(data[offset : offset+l])
-			offset += l
+			length = int(data[offset-1])
+			m.Type7UUID = string(data[offset : offset+length])
+			offset += length
 			break
 		case MdpTlvIP:
 			offset += 2
-			l = int(data[offset-1])
-			e.IPAddress = net.ParseIP(string(data[offset : offset+l]))
-			offset += l
+			length = int(data[offset-1])
+			m.IPAddress = net.ParseIP(string(data[offset : offset+length]))
+			offset += length
 			break
 		case MdpTlvUnknownBool:
 			offset += 2
-			l = int(data[offset-1])
-			e.Type13Bool, _ = strconv.ParseBool(string(data[offset : offset+l]))
-			offset += l
+			length = int(data[offset-1])
+			m.Type13Bool, _ = strconv.ParseBool(string(data[offset : offset+length]))
+			offset += length
 			break
 		case MdpTlvEnd:
-			offset = e.Length
+			offset = m.Length
 			break
 		default:
 			// Skip over unknown junk
 			offset += 2
-			l = int(data[offset-1])
-			offset += l
+			length = int(data[offset-1])
+			offset += length
 			break
 
 		}
 	}
-	e.BaseLayer = BaseLayer{Contents: data, Payload: nil}
+	m.BaseLayer = BaseLayer{Contents: data, Payload: nil}
 	return nil
 }
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer
-func (e *MDP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+func (m *MDP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	//bytes, _ := b.PrependBytes(4)
-	//bytes[0] = e.Version
-	//bytes[1] = byte(e.Type)
-	//binary.BigEndian.PutUint16(bytes[2:], e.Length)
+	//bytes[0] = m.Version
+	//bytes[1] = byte(m.Type)
+	//binary.BigEndian.PutUint16(bytes[2:], m.Length)
 	return nil
 }
 
 // CanDecode returns the set of layer types that this DecodingLayer can decode.
-func (e *MDP) CanDecode() gopacket.LayerClass {
+func (m *MDP) CanDecode() gopacket.LayerClass {
 	return LayerTypeMDP
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
-func (e *MDP) NextLayerType() gopacket.LayerType {
-	return e.Type.LayerType()
+func (m *MDP) NextLayerType() gopacket.LayerType {
+	return m.Type.LayerType()
 }
 
 func decodeMDP(data []byte, p gopacket.PacketBuilder) error {
-	e := &MDP{}
-	return decodingLayerDecoder(e, data, p)
+	m := &MDP{}
+	err := m.DecodeFromBytes(data, p)
+	if err != nil {
+		return err
+	}
+	p.AddLayer(m)
+	return p.NextDecoder(m.NextLayerType())
 }
