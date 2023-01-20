@@ -14,17 +14,32 @@ import (
 	"github.com/google/gopacket"
 )
 
+const (
+	MdpTlvType uint8 = iota
+	MdpTlvLength
+	MdpTlvDeviceInfo
+	MdpTlvNetworkInfo
+	MdpTlvLongitude
+	MdpTlvLatitude
+	MdpTlvType6
+	MdpTlvType7
+	MdpTlvIP          = 11
+	MdpTlvUnknownBool = 13
+	MdpTlvEnd         = 255
+)
+
 // MDP defines a MDP over LLC layer.
 type MDP struct {
 	BaseLayer
-	DeviceInfo  string
-	NetworkInfo string
-	Longitude   float64
-	Latitude    float64
-	Type6UUID   string
-	Type7UUID   string
-	IPAddress   net.IP
-	Type13Bool  bool
+	PreambleData []byte
+	DeviceInfo   string
+	NetworkInfo  string
+	Longitude    float64
+	Latitude     float64
+	Type6UUID    string
+	Type7UUID    string
+	IPAddress    net.IP
+	Type13Bool   bool
 
 	Type   EthernetType
 	Length int
@@ -43,6 +58,7 @@ func (e *MDP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	e.Type = EthernetTypeMerakiDiscoveryProtocol
 	e.Length = len(data)
 	offset := 28
+	e.PreambleData = data[:offset]
 
 	for {
 		if offset >= e.Length {
@@ -50,57 +66,56 @@ func (e *MDP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 		}
 		t := data[offset]
 		switch t {
-		case 2:
+		case MdpTlvDeviceInfo:
 			offset += 2
 			l = int(data[offset-1])
 			e.Contents = append(e.Contents, data[offset-2:offset+l]...)
 			e.DeviceInfo = string(data[offset : offset+l])
 			offset += l
 			break
-		case 3:
+		case MdpTlvNetworkInfo:
 			offset += 2
 			l = int(data[offset-1])
 			e.NetworkInfo = string(data[offset : offset+l])
 			offset += l
 			break
-		case 4:
+		case MdpTlvLongitude:
 			offset += 2
 			l = int(data[offset-1])
 			e.Longitude, _ = strconv.ParseFloat(string(data[offset:offset+l]), 64)
 			offset += l
 			break
-		case 5:
+		case MdpTlvLatitude:
 			offset += 2
 			l = int(data[offset-1])
 			e.Latitude, _ = strconv.ParseFloat(string(data[offset:offset+l]), 64)
 			offset += l
 			break
-		case 6:
+		case MdpTlvType6:
 			offset += 2
 			l = int(data[offset-1])
 			e.Type6UUID = string(data[offset : offset+l])
 			offset += l
 			break
-		case 7:
+		case MdpTlvType7:
 			offset += 2
 			l = int(data[offset-1])
 			e.Type7UUID = string(data[offset : offset+l])
 			offset += l
 			break
-		case 11:
+		case MdpTlvIP:
 			offset += 2
 			l = int(data[offset-1])
 			e.IPAddress = net.ParseIP(string(data[offset : offset+l]))
 			offset += l
 			break
-		case 13:
+		case MdpTlvUnknownBool:
 			offset += 2
 			l = int(data[offset-1])
 			e.Type13Bool, _ = strconv.ParseBool(string(data[offset : offset+l]))
 			offset += l
 			break
-		case 255:
-			// THE END
+		case MdpTlvEnd:
 			offset = e.Length
 			break
 		default:
