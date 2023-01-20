@@ -791,9 +791,9 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 		ChassisID: LLDPChassisID{LLDPChassisIDSubTypeMACAddr, []byte{0x00, 0x01, 0x30, 0xf9, 0xad, 0xa0}},
 		PortID:    LLDPPortID{LLDPPortIDSubtypeIfaceName, []byte("1/1")},
 		TTL:       120,
-		BaseLayer: BaseLayer{Contents: data[14:]},
+		BaseLayer: BaseLayer{Contents: data[14:33], Payload: data[33:]},
 	}
-	lldp.Values = nil // test these in next stage
+	//lldp.Values = nil // test these in next stage
 	if !reflect.DeepEqual(lldp, want) {
 		t.Errorf("Values mismatch, \ngot  %#v\nwant %#v\n", lldp, want)
 	}
@@ -819,7 +819,8 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 			LLDPOrgSpecificTLV{OUI: 0x80c2, SubType: 0x3, Info: []uint8{0x1, 0xe8, 0x10, 0x76, 0x32, 0x2d, 0x30, 0x34, 0x38, 0x38, 0x2d, 0x30, 0x33, 0x2d, 0x30, 0x35, 0x30, 0x35, 0x0}},
 			LLDPOrgSpecificTLV{OUI: 0x80c2, SubType: 0x4, Info: []uint8{0x0}},
 		},
-		Unknown: nil,
+		Unknown:   nil,
+		BaseLayer: BaseLayer{Contents: data[33:]},
 	}
 	if !reflect.DeepEqual(info, wantinfo) {
 		t.Errorf("Values mismatch, \ngot  %#v\nwant %#v\n", info, wantinfo)
@@ -891,9 +892,9 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 		ChassisID: LLDPChassisID{LLDPChassisIDSubTypeMACAddr, []byte{0x00, 0x13, 0x21, 0x57, 0xca, 0x40}},
 		PortID:    LLDPPortID{LLDPPortIDSubtypeLocal, []byte("1")},
 		TTL:       120,
-		BaseLayer: BaseLayer{Contents: data[14:]},
+		BaseLayer: BaseLayer{Contents: data[14:31], Payload: data[31:]},
 	}
-	lldp.Values = nil // test these in next stage
+	//lldp.Values = nil // test these in next stage
 	if !reflect.DeepEqual(lldp, want) {
 		t.Errorf("Values mismatch, \ngot  %#v\nwant %#v\n", lldp, want)
 	}
@@ -916,7 +917,8 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 			LLDPOrgSpecificTLV{OUI: 0x12bb, SubType: 0x3, Info: []uint8{0x2, 0x28, 0x2, 0x55, 0x53, 0x1, 0x2, 0x43, 0x41, 0x3, 0x9, 0x52, 0x6f, 0x73, 0x65, 0x76, 0x69, 0x6c, 0x6c, 0x65, 0x6, 0x9, 0x46, 0x6f, 0x6f, 0x74, 0x68, 0x69, 0x6c, 0x6c, 0x73, 0x13, 0x4, 0x38, 0x30, 0x30, 0x30, 0x1a, 0x3, 0x52, 0x33, 0x4c}},
 			LLDPOrgSpecificTLV{OUI: 0x12bb, SubType: 0x4, Info: []uint8{0x3, 0x0, 0x41}},
 		},
-		Unknown: nil,
+		Unknown:   nil,
+		BaseLayer: BaseLayer{Contents: data[31:]},
 	}
 	if !reflect.DeepEqual(info, wantinfo) {
 		t.Errorf("Values mismatch, \ngot  %#v\nwant %#v\n", info, wantinfo)
